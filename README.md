@@ -3,12 +3,17 @@
 I was tired to write the same Dockerfile again and again, so I did a
 simple tool to generate, a Dockerfile for your Go microservice.
 
-The Dockerfile is based in the golang image, and it builds the project and sets the entrypoint and the expose port.
-It uses [godep](https://github.com/tools/godep) for vendoring the dependencies.
+The Dockerfile is based in the golang image, it follows these steps.
+* Based in golang:stable
+* Use [godep](https://github.com/tools/godep) for vendoring the dependencies. (if you are not using godep, It will break).
+* Uses the project name and the root directory as a ENTRYPOINT
+* Restores the dependencies via 'godep restore'
+* Compiles the project
+* Exposes the port
 
 The Dockerfile is inspired by this two blog post.
-http://blog.charmes.net/2014/11/release-go-code-and-others-via-docker.html?spref=tw
-https://blog.golang.org/docker
+* http://blog.charmes.net/2014/11/release-go-code-and-others-via-docker.html?spref=tw
+* https://blog.golang.org/docker
 
 ## Install
 ```
