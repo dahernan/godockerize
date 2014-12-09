@@ -3,8 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -33,6 +36,15 @@ RUN cd $APP_DIR && CGO_ENABLED=0 go build -o /opt/app/{{.Entrypoint}} -ldflags '
 
 EXPOSE {{.Expose}}
 `
+
+	buildScratchTemplate = `
+FROM scratch
+ENTRYPOINT ["/{{.Entrypoint}}"]
+
+# Add the binary
+ADD {{.Entrypoint}} /
+EXPOSE {{.Expose}}
+`
 )
 
 type DockerInfo struct {
@@ -43,6 +55,7 @@ type DockerInfo struct {
 
 func main() {
 	expose := flag.String("expose", "3000", "Port to expose in docker")
+	fromTheScratch := flag.Bool("scratch", false, "Build the from the base image scratch")
 
 	flag.Parse()
 
@@ -62,7 +75,13 @@ func main() {
 		Expose:     *expose,
 	}
 
-	generateDockerfile(dockerInfo)
+	if *fromTheScratch {
+		buildForLinux(dockerInfo)
+		generateDockerfileFromScratch(dockerInfo)
+	} else {
+		generateDockerfile(dockerInfo)
+	}
+
 }
 
 func generateDockerfile(dockerInfo DockerInfo) {
@@ -70,7 +89,7 @@ func generateDockerfile(dockerInfo DockerInfo) {
 
 	f, err := os.Create("Dockerfile")
 	if err != nil {
-		fmt.Printf("Error wrinting Dockerfile %v", err.Error())
+		log.Fatal("Error wrinting Dockerfile %v", err.Error())
 		return
 	}
 	defer f.Close()
@@ -79,4 +98,47 @@ func generateDockerfile(dockerInfo DockerInfo) {
 
 	fmt.Printf("Dockerfile generated, you can build the image with: \n")
 	fmt.Printf("$ docker build -t %s .\n", dockerInfo.Entrypoint)
+}
+
+func generateDockerfileFromScratch(dockerInfo DockerInfo) {
+	t := template.Must(template.New("buildScratchTemplate").Parse(buildScratchTemplate))
+
+	f, err := os.Create("Dockerfile")
+	if err != nil {
+		log.Fatal("Error writing Dockerfile %v", err.Error())
+		return
+	}
+	defer f.Close()
+
+	t.Execute(f, dockerInfo)
+
+	fmt.Printf("Dockerfile from the scratch generated, you can build the image with: \n")
+	fmt.Printf("$ docker build -t %s .\n", dockerInfo.Entrypoint)
+
+}
+
+func buildForLinux(dockerInfo DockerInfo) {
+	os.Setenv("GOOS", "linux")
+	os.Setenv("CGO_ENABLED", "0")
+	cmd := exec.Command("go", "build", "-o", dockerInfo.Entrypoint)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	err = cmd.Start()
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	io.Copy(os.Stdout, stdout)
+	errBuf, _ := ioutil.ReadAll(stderr)
+	err = cmd.Wait()
+	if err != nil {
+		log.Fatalf("%s", errBuf)
+	}
+
 }
