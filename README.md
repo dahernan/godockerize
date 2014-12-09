@@ -37,12 +37,12 @@ $ docker build -t gopherscraper .
 
 ## Build from the scratch image instead of using golang image
 
-!Warning Only tested in Mac, you have to enable cross compilation
+**Warning Only tested in Mac, you have to enable cross compilation, check below to see how to do it**
 
 If you use the flag 'scratch', the script is going to:
 
-1) Crosscompile the project for linux
-2) Generate a Dockerfile ready to build, from the scratch
+1. Crosscompile the project for linux
+2. Generate a Dockerfile ready to build, from the scratch
 
 ```
 # Go to the root directory of your project, for example
