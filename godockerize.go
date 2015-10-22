@@ -31,8 +31,8 @@ ADD . $APP_DIR
 
 # Compile the binary and statically link
 RUN mkdir /opt/app
-RUN cd $APP_DIR && godep restore
-RUN cd $APP_DIR && CGO_ENABLED=0 go build -o /opt/app/{{.Entrypoint}} -ldflags '-d -w -s'
+RUN cd $APP_DIR
+RUN cd $APP_DIR && CGO_ENABLED=0 godep go build -o /opt/app/{{.Entrypoint}} -ldflags '-d -w -s'
 
 EXPOSE {{.Expose}}
 `
